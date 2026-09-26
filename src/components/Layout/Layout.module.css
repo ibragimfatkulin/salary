@@ -1,0 +1,29 @@
+/* Внешний контейнер layout */
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Основной контент под хедером */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Внутренний контейнер для центрирования контента */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  width: 100%;
+}
+
+/* Заголовок страницы */
+.pageTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-lg);
+}

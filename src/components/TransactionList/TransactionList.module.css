@@ -1,0 +1,135 @@
+/* Контейнер списка */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Отдельная строка операции */
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.2s ease;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background-color: rgba(37, 99, 235, 0.03);
+}
+
+/* Иконка категории */
+.categoryIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background-color: var(--color-border);
+}
+
+/* Информация об операции */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+/* Название категории */
+.categoryName {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Комментарий и дата */
+.meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Сумма операции */
+.amount {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Цвета для разных типов */
+.incomeAmount {
+  color: var(--color-success);
+}
+
+.expenseAmount {
+  color: var(--color-danger);
+}
+
+/* Контейнер кнопок действий */
+.actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+/* Кнопка действия (редактирование/удаление) */
+.actionButton {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  line-height: 1;
+}
+
+.actionButton:hover {
+  background-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.deleteButton:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: auto 1fr auto;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding-top: var(--spacing-xs);
+    border-top: 1px dashed var(--color-border);
+  }
+
+  .categoryIcon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .amount {
+    font-size: var(--font-size-sm);
+  }
+}
