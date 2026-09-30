@@ -1,5 +1,3 @@
--- server/src/db/schema.sql
-
 -- Таблица доходов
 CREATE TABLE IF NOT EXISTS incomes (
   id          TEXT PRIMARY KEY,
@@ -22,3 +20,9 @@ CREATE TABLE IF NOT EXISTS expenses (
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Индексы для ускорения запросов по дате и категории
+CREATE INDEX IF NOT EXISTS idx_incomes_date ON incomes(date);
+CREATE INDEX IF NOT EXISTS idx_incomes_category ON incomes(category);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);

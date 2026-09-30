@@ -1,108 +1,75 @@
-import React from 'react';
-import EmptyState from '../EmptyState/EmptyState';
-import styles from './TransactionList.module.css';
-
-// Маппинг категорий на иконки
-const CATEGORY_ICONS = {
-  // Доходы
-  salary: '💼',
-  freelance: '💻',
-  bonus: '🎁',
-  debt_return: '💰',
-  deposit_interest: '🏦',
-  gift: '🎀',
-  // Расходы
-  groceries: '🛒',
-  utilities: '💡',
-  rent: '🏠',
-  subscriptions: '📱',
-  transport: '🚌',
-  health: '⚕️',
-  clothing: '👕',
-  entertainment: '🎬',
-  communication: '📞',
-  // Прочее
-  other: '📦'
-};
-
-// Форматирование суммы
-const formatAmount = (amount, type) => {
-  const value = amount ?? 0;
-  const formatted = new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
-  
-  return type === 'income' ? `+${formatted}` : `-${formatted}`;
-};
-
-// Форматирование даты
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  }).format(date);
-};
+import React from "react";
+import styles from "./TransactionList.module.css";
+import EmptyState from "../EmptyState/EmptyState";
 
 function TransactionList({ transactions, onEdit, onDelete }) {
-  // Fallback для transactions
-  const items = transactions || [];
-
-  // Если список пуст — показываем EmptyState
-  if (items.length === 0) {
+  // Если список операций пуст — показываем заглушку
+  if (!transactions || transactions.length === 0) {
     return (
       <EmptyState
-        icon="📋"
         title="Нет операций"
-        description="Добавьте первую операцию, чтобы увидеть её здесь"
+        description="Добавьте первую операцию, чтобы увидеть историю"
+        icon="📋"
       />
     );
   }
 
   return (
     <div className={styles.list}>
-      {items.map((transaction) => {
-        const icon = CATEGORY_ICONS[transaction.categoryId] || CATEGORY_ICONS.other;
-        const amountClass = transaction.type === 'income' 
-          ? styles.incomeAmount 
-          : styles.expenseAmount;
+      {(transactions || []).map((transaction) => {
+        // Fallback для полей операции
+        const type = transaction?.type || "expense";
+        const category = transaction?.category || "Прочее";
+        const amount = transaction?.amount ?? 0;
+        const date =
+          transaction?.date || new Date().toISOString().split("T")[0];
+        const comment = transaction?.comment || "";
+        const id = transaction?.id;
+
+        // Форматирование суммы с учётом типа операции
+        const formattedAmount =
+          type === "income"
+            ? `+${amount.toLocaleString("ru-RU")} ₽`
+            : `-${amount.toLocaleString("ru-RU")} ₽`;
+
+        // Форматирование даты
+        const formattedDate = new Date(date).toLocaleDateString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+
+        // Иконка категории (временно — эмодзи, позже будет из constants)
+        const categoryIcon = type === "income" ? "💰" : "💸";
 
         return (
-          <div key={transaction.id} className={styles.row}>
+          <div key={id} className={`${styles.item} ${styles[type]}`}>
             {/* Иконка категории */}
-            <div className={styles.categoryIcon}>
-              {icon}
-            </div>
+            <div className={styles.categoryIcon}>{categoryIcon}</div>
 
-            {/* Информация об операции */}
+            {/* Основная информация */}
             <div className={styles.info}>
-              <div className={styles.categoryName}>
-                {transaction.categoryLabel || 'Без категории'}
+              <div className={styles.topRow}>
+                <div className={styles.category}>{category}</div>
+                <div
+                  className={`${styles.amount} ${styles[`amount${type.charAt(0).toUpperCase() + type.slice(1)}`]}`}
+                >
+                  {formattedAmount}
+                </div>
               </div>
-              <div className={styles.meta}>
-                {transaction.comment && `${transaction.comment} • `}
-                {formatDate(transaction.date)}
-              </div>
-            </div>
 
-            {/* Сумма */}
-            <div className={`${styles.amount} ${amountClass}`}>
-              {formatAmount(transaction.amount, transaction.type)}
+              <div className={styles.bottomRow}>
+                <div className={styles.date}>{formattedDate}</div>
+                {comment && <div className={styles.comment}>{comment}</div>}
+              </div>
             </div>
 
             {/* Кнопки действий */}
             <div className={styles.actions}>
               {onEdit && (
                 <button
-                  className={styles.actionButton}
+                  className={`${styles.actionButton} ${styles.editButton}`}
                   onClick={() => onEdit(transaction)}
-                  aria-label="Редактировать"
                   title="Редактировать"
                 >
                   ✏️
@@ -111,8 +78,7 @@ function TransactionList({ transactions, onEdit, onDelete }) {
               {onDelete && (
                 <button
                   className={`${styles.actionButton} ${styles.deleteButton}`}
-                  onClick={() => onDelete(transaction.id)}
-                  aria-label="Удалить"
+                  onClick={() => onDelete(transaction)}
                   title="Удалить"
                 >
                   🗑️

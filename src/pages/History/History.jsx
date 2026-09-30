@@ -1,143 +1,103 @@
-import React, { useState, useEffect } from 'react';
-import TransactionList from '../../components/TransactionList/TransactionList';
-import Modal from '../../components/Modal/Modal';
-import TransactionForm from '../../components/TransactionForm/TransactionForm';
-import { getIncomes, updateIncome, deleteIncome } from '../../services/incomeService';
-import { getExpenses, updateExpense, deleteExpense } from '../../services/expenseService';
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../../utils/constants';
-import { isCurrentMonth, isCurrentYear } from '../../utils/formatters';
-import styles from './History.module.css';
+import React, { useState, useEffect } from "react";
+import styles from "./History.module.css";
+import TransactionList from "../../components/TransactionList/TransactionList";
+import Modal from "../../components/Modal/Modal";
+import TransactionForm from "../../components/TransactionForm/TransactionForm";
+import { getAllTransactions } from "../../services/summaryService";
+import {
+  addIncome,
+  updateIncome,
+  deleteIncome,
+} from "../../services/incomeService";
+import {
+  addExpense,
+  updateExpense,
+  deleteExpense,
+} from "../../services/expenseService";
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "../../utils/constants";
+import { isDateInPeriod } from "../../utils/formatters";
 
 function History() {
-  // Состояние данных
-  const [allTransactions, setAllTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-
   // Состояние фильтров
-  const [filters, setFilters] = useState({
-    type: 'all',
-    category: 'all',
-    period: 'all'
-  });
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState("all");
 
   // Состояние модалки
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
 
-  // Загрузка данных при монтировании
+  // Состояние данных
+  const [allTransactions, setAllTransactions] = useState([]);
+
+  // Загрузка данных при монтировании компонента
   useEffect(() => {
     loadData();
   }, []);
 
-  // Применение фильтров при изменении данных или фильтров
-  useEffect(() => {
-    applyFilters();
-  }, [allTransactions, filters]);
-
   // Функция загрузки данных
   const loadData = () => {
-    const incomes = getIncomes();
-    const expenses = getExpenses();
-    
-    // Объединение и сортировка по дате (новые первыми)
-    const combined = [...incomes, ...expenses]
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    setAllTransactions(combined);
+    const transactions = getAllTransactions();
+    setAllTransactions(transactions);
   };
 
-  // Применение фильтров
-  const applyFilters = () => {
-    let filtered = [...allTransactions];
-
-    // Фильтр по типу
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(t => t.type === filters.type);
+  // Получаем категории для текущего фильтра типа
+  const getCategoriesForFilter = () => {
+    if (typeFilter === "income") {
+      return INCOME_CATEGORIES;
+    } else if (typeFilter === "expense") {
+      return EXPENSE_CATEGORIES;
+    } else {
+      // Все категории (доходы + расходы)
+      return [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
     }
+  };
+
+  // Фильтрация операций
+  const filteredTransactions = (allTransactions || []).filter((transaction) => {
+    // Фильтр по типу
+    if (typeFilter !== "all" && transaction?.type !== typeFilter) return false;
 
     // Фильтр по категории
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(t => t.categoryId === filters.category);
-    }
+    if (categoryFilter !== "all" && transaction?.category !== categoryFilter)
+      return false;
 
     // Фильтр по периоду
-    if (filters.period !== 'all') {
-      filtered = filtered.filter(t => {
-        if (filters.period === 'month') {
-          return isCurrentMonth(t.date);
-        }
-        if (filters.period === 'year') {
-          return isCurrentYear(t.date);
-        }
-        return true;
-      });
-    }
+    if (!isDateInPeriod(transaction?.date, periodFilter)) return false;
 
-    setFilteredTransactions(filtered);
-  };
+    return true;
+  });
 
-  // Обработчик изменения фильтра
-  const handleFilterChange = (filterName, value) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
-  };
-
-  // Обработчик сброса фильтров
-  const handleResetFilters = () => {
-    setFilters({
-      type: 'all',
-      category: 'all',
-      period: 'all'
-    });
-  };
-
-  // Обработчик редактирования операции
-  const handleEdit = (transaction) => {
-    setEditingTransaction(transaction);
-    setIsModalOpen(true);
-  };
-
-  // Обработчик удаления операции
-  const handleDelete = (id) => {
-    if (!confirm('Вы уверены, что хотите удалить эту операцию?')) {
-      return;
-    }
-
-    // Определяем тип операции и вызываем соответствующий сервис
-    const transaction = allTransactions.find(t => t.id === id);
-    if (transaction?.type === 'income') {
-      deleteIncome(id);
-    } else {
-      deleteExpense(id);
-    }
-
-    // Перезагружаем данные
-    loadData();
-  };
-
-  // Обработчик открытия модалки для новой операции
-  const handleOpenModal = () => {
+  // Открытие модалки для добавления
+  const handleOpenAddModal = () => {
     setEditingTransaction(null);
     setIsModalOpen(true);
   };
 
-  // Обработчик закрытия модалки
+  // Открытие модалки для редактирования
+  const handleOpenEditModal = (transaction) => {
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  // Закрытие модалки
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingTransaction(null);
   };
 
-  // Обработчик отправки формы (добавление или обновление)
-  const handleSubmitForm = (data) => {
-    if (editingTransaction) {
-      // Обновление существующей операции
-      if (editingTransaction.type === 'income') {
+  // Обработка отправки формы (добавление или редактирование)
+  const handleSubmit = (data) => {
+    if (editingTransaction?.id) {
+      // Редактирование существующей операции
+      if (data.type === "income") {
         updateIncome(editingTransaction.id, data);
       } else {
         updateExpense(editingTransaction.id, data);
       }
     } else {
       // Добавление новой операции
-      if (data.type === 'income') {
+      if (data.type === "income") {
         addIncome(data);
       } else {
         addExpense(data);
@@ -149,22 +109,50 @@ function History() {
     handleCloseModal();
   };
 
-  // Получение списка категорий для фильтра (объединение доходов и расходов)
-  const allCategories = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
+  // Обработка удаления операции
+  const handleDelete = (transaction) => {
+    if (!transaction?.id) return;
+
+    const confirmed = window.confirm(
+      "Вы уверены, что хотите удалить эту операцию?",
+    );
+    if (!confirmed) return;
+
+    if (transaction.type === "income") {
+      deleteIncome(transaction.id);
+    } else {
+      deleteExpense(transaction.id);
+    }
+
+    // Перезагружаем данные
+    loadData();
+  };
+
+  // Сброс фильтров
+  const handleResetFilters = () => {
+    setTypeFilter("all");
+    setCategoryFilter("all");
+    setPeriodFilter("all");
+  };
+
+  // Смена типа фильтра — сбрасываем фильтр по категории
+  const handleTypeFilterChange = (newType) => {
+    setTypeFilter(newType);
+    setCategoryFilter("all");
+  };
 
   return (
-    <div>
+    <div className={styles.history}>
       <h1 className={styles.title}>История операций</h1>
 
       {/* Панель фильтров */}
       <div className={styles.filters}>
-        {/* Фильтр по типу операции */}
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Тип операции</label>
           <select
-            className={styles.filterSelect}
-            value={filters.type}
-            onChange={(e) => handleFilterChange('type', e.target.value)}
+            className={styles.filterInput}
+            value={typeFilter}
+            onChange={(e) => handleTypeFilterChange(e.target.value)}
           >
             <option value="all">Все</option>
             <option value="income">Доходы</option>
@@ -172,16 +160,15 @@ function History() {
           </select>
         </div>
 
-        {/* Фильтр по категории */}
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Категория</label>
           <select
-            className={styles.filterSelect}
-            value={filters.category}
-            onChange={(e) => handleFilterChange('category', e.target.value)}
+            className={styles.filterInput}
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
           >
             <option value="all">Все категории</option>
-            {allCategories.map(cat => (
+            {(getCategoriesForFilter() || []).map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.label}
               </option>
@@ -189,37 +176,31 @@ function History() {
           </select>
         </div>
 
-        {/* Фильтр по периоду */}
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Период</label>
           <select
-            className={styles.filterSelect}
-            value={filters.period}
-            onChange={(e) => handleFilterChange('period', e.target.value)}
+            className={styles.filterInput}
+            value={periodFilter}
+            onChange={(e) => setPeriodFilter(e.target.value)}
           >
             <option value="all">Всё время</option>
-            <option value="month">Этот месяц</option>
-            <option value="year">Этот год</option>
+            <option value="today">Сегодня</option>
+            <option value="week">Неделя</option>
+            <option value="month">Месяц</option>
+            <option value="year">Год</option>
           </select>
         </div>
 
-        {/* Кнопка сброса фильтров */}
-        <button
-          className={styles.resetButton}
-          onClick={handleResetFilters}
-        >
-          Сбросить
+        <button className={styles.resetButton} onClick={handleResetFilters}>
+          Сбросить фильтры
         </button>
       </div>
 
-      {/* Контейнер списка операций */}
+      {/* Список операций */}
       <div className={styles.listContainer}>
-        <h2 className={styles.sectionTitle}>
-          Все операции ({filteredTransactions.length})
-        </h2>
         <TransactionList
           transactions={filteredTransactions}
-          onEdit={handleEdit}
+          onEdit={handleOpenEditModal}
           onDelete={handleDelete}
         />
       </div>
@@ -228,10 +209,10 @@ function History() {
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={editingTransaction ? 'Редактирование операции' : 'Новая операция'}
+        title={editingTransaction ? "Редактировать операцию" : "Новая операция"}
       >
         <TransactionForm
-          onSubmit={handleSubmitForm}
+          onSubmit={handleSubmit}
           onCancel={handleCloseModal}
           editData={editingTransaction}
         />

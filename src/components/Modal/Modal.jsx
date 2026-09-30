@@ -1,59 +1,51 @@
-import React, { useEffect, useCallback } from 'react';
-import styles from './Modal.module.css';
+import React, { useEffect } from "react";
+import styles from "./Modal.module.css";
 
 function Modal({ isOpen, onClose, title, children }) {
-  // Обработчик закрытия по Escape
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Escape') {
-        onClose?.();
-      }
-    },
-    [onClose]
-  );
-
-  // Добавляем/удаляем слушатель клавиатуры при открытии/закрытии
+  // Закрытие по Escape
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      // Блокируем прокрутку body при открытой модалке
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return;
+
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    // Блокируем прокрутку body, когда модалка открыта
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, onClose]);
 
-  // Обработчик клика на overlay (закрытие при клике вне модалки)
+  // Если модалка не открыта — не рендерим ничего
+  if (!isOpen) return null;
+
+  // Закрытие по клику на overlay
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
-      onClose?.();
+      onClose();
     }
   };
-
-  // Если модалка закрыта — ничего не рендерим
-  if (!isOpen) {
-    return null;
-  }
 
   return (
     <div className={styles.overlay} onClick={handleOverlayClick}>
       <div className={styles.modal}>
-        {/* Заголовок с кнопкой закрытия */}
         <div className={styles.header}>
-          <h2 className={styles.title}>{title || 'Модальное окно'}</h2>
+          <h2 className={styles.title}>{title || "Модальное окно"}</h2>
           <button
             className={styles.closeButton}
-            onClick={() => onClose?.()}
+            onClick={onClose}
             aria-label="Закрыть"
           >
             ×
           </button>
         </div>
-
-        {/* Контент модального окна */}
         <div className={styles.content}>{children}</div>
       </div>
     </div>

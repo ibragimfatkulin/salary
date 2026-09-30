@@ -1,21 +1,57 @@
-import Database from 'better-sqlite3';
-import { readFileSync } from 'fs';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import fs from 'fs/promises';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { DB_PATH } from '../config/index.js';
 
-// Получаем путь к текущей директории (т.к. используем ES-модули)
+// Получаем директорию текущего файла
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
-// Инициализируем базу данных (файл создастся автоматически, если его нет)
-const db = new Database(DB_PATH);
+// Путь к файлу схемы
+const SCHEMA_PATH = path.resolve(__dirname, 'schema.sql');
 
-// Включаем WAL-режим для лучшей производительности и поддержки параллельного чтения
-db.pragma('journal_mode = WAL');
+// Объект базы данных (будет инициализирован ниже)
+let db = null;
 
-// Читаем SQL-скрипт схемы и выполняем его (создаст таблицы, если их ещё нет)
-const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
-db.exec(schema);
+/**
+ * Инициализация подключения к базе данных
+ * Создаёт файл БД (если не существует) и выполняет схему
+ */
+async function initializeDatabase() {
+  try {
+    // Открываем соединение с базой данных
+    db = await open({
+      filename: DB_PATH,
+      driver: sqlite3.Database
+    });
 
-export default db;
+    // Читаем SQL-схему из файла
+    const schema = await fs.readFile(SCHEMA_PATH, 'utf-8');
+
+    // Выполняем схему (создаёт таблицы, если их нет)
+    await db.exec(schema);
+
+    console.log('✅ База данных успешно инициализирована');
+  } catch (error) {
+    console.error('❌ Ошибка инициализации базы данных:', error);
+    process.exit(1);
+  }
+}
+
+// Инициализируем БД при первом импорте модуля
+initializeDatabase();
+
+/**
+ * Получение объекта базы данных
+ * @returns {Object} объект базы данных sqlite
+ */
+export function getDb() {
+  if (!db) {
+    throw new Error('База данных ещё не инициализирована');
+  }
+  return db;
+}
+
+export default { getDb };
