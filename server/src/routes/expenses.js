@@ -1,45 +1,48 @@
 import { Router } from 'express';
-import * as expenseController from '../controllers/expenseController.js';
-import { validateTransactionMiddleware } from '../middleware/validate.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
+import {
+  getExpenses,
+  getExpenseById,
+  createExpense,
+  updateExpense,
+  deleteExpense
+} from '../controllers/expenseController.js';
 
 const router = Router();
 
 /**
- * GET /api/v1/expenses
- * Получить все расходы с пагинацией и фильтрами
+ * @route   GET /api/v1/expenses
+ * @desc    Получить список расходов текущего пользователя
+ * @access  Private
  */
-router.get('/', expenseController.getAllExpenses);
+router.get('/', authenticateToken, getExpenses);
 
 /**
- * GET /api/v1/expenses/:id
- * Получить расход по ID
+ * @route   GET /api/v1/expenses/:id
+ * @desc    Получить один расход по ID
+ * @access  Private
  */
-router.get('/:id', expenseController.getExpenseById);
+router.get('/:id', authenticateToken, getExpenseById);
 
 /**
- * POST /api/v1/expenses
- * Создать новый расход
+ * @route   POST /api/v1/expenses
+ * @desc    Создать новый расход
+ * @access  Private
  */
-router.post(
-  '/',
-  validateTransactionMiddleware('expense'),
-  expenseController.createExpense
-);
+router.post('/', authenticateToken, createExpense);
 
 /**
- * PUT /api/v1/expenses/:id
- * Обновить существующий расход
+ * @route   PUT /api/v1/expenses/:id
+ * @desc    Обновить расход
+ * @access  Private
  */
-router.put(
-  '/:id',
-  validateTransactionMiddleware('expense'),
-  expenseController.updateExpense
-);
+router.put('/:id', authenticateToken, updateExpense);
 
 /**
- * DELETE /api/v1/expenses/:id
- * Удалить расход по ID
+ * @route   DELETE /api/v1/expenses/:id
+ * @desc    Удалить расход
+ * @access  Private
  */
-router.delete('/:id', expenseController.deleteExpense);
+router.delete('/:id', authenticateToken, deleteExpense);
 
 export default router;

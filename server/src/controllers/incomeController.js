@@ -1,45 +1,72 @@
-import * as incomeService from '../services/incomeService.js';
+import { getDb } from '../db/connection.js';
+import crypto from 'crypto';
 
 /**
- * Получить все доходы с пагинацией и фильтрами
+ * Получить список доходов текущего пользователя
  * GET /api/v1/incomes
  */
-export async function getAllIncomes(req, res, next) {
+export async function getIncomes(req, res, next) {
   try {
-    const { page, limit, category, dateFrom, dateTo } = req.query;
+    const db = getDb();
+    const userId = req.user.id; // <-- Получаем ID текущего пользователя из middleware
+    
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
 
-    const result = await incomeService.getAllIncomes({
-      page: Number(page),
-      limit: Number(limit),
-      category,
-      dateFrom,
-      dateTo,
+    // Получаем доходы только текущего пользователя
+    const incomes = await db.all(
+      `SELECT * FROM incomes 
+       WHERE user_id = ? 
+       ORDER BY date DESC, created_at DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, limit, offset]
+    );
+
+    // Получаем общее количество доходов пользователя
+    const { total } = await db.get(
+      'SELECT COUNT(*) as total FROM incomes WHERE user_id = ?',
+      [userId]
+    );
+
+    return res.json({
+      data: incomes,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + limit < total
+      }
     });
-
-    res.json(result);
   } catch (error) {
     next(error);
   }
 }
 
 /**
- * Получить доход по ID
+ * Получить один доход по ID (только если он принадлежит текущему пользователю)
  * GET /api/v1/incomes/:id
  */
 export async function getIncomeById(req, res, next) {
   try {
+    const db = getDb();
+    const userId = req.user.id;
     const { id } = req.params;
 
-    const income = await incomeService.getIncomeById(id);
+    const income = await db.get(
+      'SELECT * FROM incomes WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
 
     if (!income) {
-      const error = new Error(`Доход с id=${id} не найден`);
-      error.statusCode = 404;
-      error.code = 'NOT_FOUND';
-      throw error;
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Доход не найден или не принадлежит вам'
+        }
+      });
     }
 
-    res.json(income);
+    return res.json({ data: income });
   } catch (error) {
     next(error);
   }
@@ -51,68 +78,112 @@ export async function getIncomeById(req, res, next) {
  */
 export async function createIncome(req, res, next) {
   try {
-    const { amount, date, category, comment } = req.body;
+    const db = getDb();
+    const userId = req.user.id; // <-- Привязываем доход к текущему пользователю
+    
+    const { amount, date, category, comment, is_recurring, recurring_period, recurring_end_date } = req.body;
 
-    const newIncome = await incomeService.createIncome({
-      amount,
-      date,
-      category,
-      comment,
-    });
+    // Валидация
+    if (!amount || !date || !category) {
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Поля amount, date и category обязательны'
+        }
+      });
+    }
 
-    res.status(201).json(newIncome);
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await db.run(
+      `INSERT INTO incomes 
+       (id, user_id, amount, date, category, comment, is_recurring, recurring_period, recurring_end_date, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, userId, amount, date, category, comment || null, is_recurring ? 1 : 0, recurring_period || null, recurring_end_date || null, now, now]
+    );
+
+    const income = await db.get('SELECT * FROM incomes WHERE id = ?', [id]);
+
+    return res.status(201).json({ data: income });
   } catch (error) {
     next(error);
   }
 }
 
 /**
- * Обновить существующий доход
+ * Обновить доход (только если он принадлежит текущему пользователю)
  * PUT /api/v1/incomes/:id
  */
 export async function updateIncome(req, res, next) {
   try {
+    const db = getDb();
+    const userId = req.user.id;
     const { id } = req.params;
-    const { amount, date, category, comment } = req.body;
 
-    const updatedIncome = await incomeService.updateIncome(id, {
-      amount,
-      date,
-      category,
-      comment,
-    });
+    // Проверяем, что доход существует и принадлежит пользователю
+    const existingIncome = await db.get(
+      'SELECT * FROM incomes WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
 
-    if (!updatedIncome) {
-      const error = new Error(`Доход с id=${id} не найден`);
-      error.statusCode = 404;
-      error.code = 'NOT_FOUND';
-      throw error;
+    if (!existingIncome) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Доход не найден или не принадлежит вам'
+        }
+      });
     }
 
-    res.json(updatedIncome);
+    const { amount, date, category, comment, is_recurring, recurring_period, recurring_end_date } = req.body;
+    const now = new Date().toISOString();
+
+    await db.run(
+      `UPDATE incomes 
+       SET amount = ?, date = ?, category = ?, comment = ?, is_recurring = ?, recurring_period = ?, recurring_end_date = ?, updated_at = ?
+       WHERE id = ? AND user_id = ?`,
+      [amount || existingIncome.amount, date || existingIncome.date, category || existingIncome.category, 
+       comment !== undefined ? comment : existingIncome.comment, 
+       is_recurring !== undefined ? (is_recurring ? 1 : 0) : existingIncome.is_recurring,
+       recurring_period || existingIncome.recurring_period, 
+       recurring_end_date || existingIncome.recurring_end_date, 
+       now, id, userId]
+    );
+
+    const updatedIncome = await db.get('SELECT * FROM incomes WHERE id = ?', [id]);
+
+    return res.json({ data: updatedIncome });
   } catch (error) {
     next(error);
   }
 }
 
 /**
- * Удалить доход по ID
+ * Удалить доход (только если он принадлежит текущему пользователю)
  * DELETE /api/v1/incomes/:id
  */
 export async function deleteIncome(req, res, next) {
   try {
+    const db = getDb();
+    const userId = req.user.id;
     const { id } = req.params;
 
-    const deleted = await incomeService.deleteIncome(id);
+    const result = await db.run(
+      'DELETE FROM incomes WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
 
-    if (!deleted) {
-      const error = new Error(`Доход с id=${id} не найден`);
-      error.statusCode = 404;
-      error.code = 'NOT_FOUND';
-      throw error;
+    if (result.changes === 0) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Доход не найден или не принадлежит вам'
+        }
+      });
     }
 
-    res.status(204).send();
+    return res.json({ message: 'Доход успешно удален' });
   } catch (error) {
     next(error);
   }

@@ -1,22 +1,26 @@
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Layout from "./components/Layout/Layout";
-import Dashboard from "./pages/Dashboard/Dashboard";
-import History from "./pages/History/History";
-import Analytics from "./pages/Analytics/Analytics";
+import { useAuth } from './context/AuthContext';
+import AuthPage from './pages/AuthPage';
+import Dashboard from './pages/Dashboard/Dashboard'; // <-- Исправленный путь
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/analytics" element={<Analytics />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
-  );
+  const { user, loading, isAuthenticated } = useAuth();
+
+  // Пока идёт проверка авторизации (чтение токена из localStorage и запрос к /auth/me)
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <p>Загрузка...</p>
+      </div>
+    );
+  }
+
+  // Если пользователь не авторизован — показываем страницу входа/регистрации
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  // Если авторизован — показываем Dashboard
+  return <Dashboard />;
 }
 
 export default App;

@@ -1,45 +1,51 @@
 import { Router } from 'express';
-import * as incomeController from '../controllers/incomeController.js';
-import { validateTransactionMiddleware } from '../middleware/validate.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
+import {
+  getIncomes,
+  getIncomeById,
+  createIncome,
+  updateIncome,
+  deleteIncome
+} from '../controllers/incomeController.js';
 
 const router = Router();
 
-/**
- * GET /api/v1/incomes
- * Получить все доходы с пагинацией и фильтрами
- */
-router.get('/', incomeController.getAllIncomes);
+// Все маршруты защищены middleware authenticateToken
+// req.user будет доступен во всех контроллерах
 
 /**
- * GET /api/v1/incomes/:id
- * Получить доход по ID
+ * @route   GET /api/v1/incomes
+ * @desc    Получить список доходов текущего пользователя
+ * @access  Private
  */
-router.get('/:id', incomeController.getIncomeById);
+router.get('/', authenticateToken, getIncomes);
 
 /**
- * POST /api/v1/incomes
- * Создать новый доход
+ * @route   GET /api/v1/incomes/:id
+ * @desc    Получить один доход по ID
+ * @access  Private
  */
-router.post(
-  '/',
-  validateTransactionMiddleware('income'),
-  incomeController.createIncome
-);
+router.get('/:id', authenticateToken, getIncomeById);
 
 /**
- * PUT /api/v1/incomes/:id
- * Обновить существующий доход
+ * @route   POST /api/v1/incomes
+ * @desc    Создать новый доход
+ * @access  Private
  */
-router.put(
-  '/:id',
-  validateTransactionMiddleware('income'),
-  incomeController.updateIncome
-);
+router.post('/', authenticateToken, createIncome);
 
 /**
- * DELETE /api/v1/incomes/:id
- * Удалить доход по ID
+ * @route   PUT /api/v1/incomes/:id
+ * @desc    Обновить доход
+ * @access  Private
  */
-router.delete('/:id', incomeController.deleteIncome);
+router.put('/:id', authenticateToken, updateIncome);
+
+/**
+ * @route   DELETE /api/v1/incomes/:id
+ * @desc    Удалить доход
+ * @access  Private
+ */
+router.delete('/:id', authenticateToken, deleteIncome);
 
 export default router;

@@ -1,26 +1,32 @@
 import { Router } from 'express';
-import * as summaryController from '../controllers/summaryController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
+import {
+  getBalance,
+  getStatistics,
+  getRecentTransactions
+} from '../controllers/summaryController.js';
 
 const router = Router();
 
 /**
- * GET /api/v1/summary/balance
- * Получить общий баланс (сумма доходов, расходов и разницу)
+ * @route   GET /api/v1/summary/balance
+ * @desc    Получить баланс текущего пользователя
+ * @access  Private
  */
-router.get('/balance', summaryController.getBalance);
+router.get('/balance', authenticateToken, getBalance);
 
 /**
- * GET /api/v1/summary/by-category
- * Получить сумму по категориям (для круговой диаграммы)
- * Query params: type (income|expense), dateFrom, dateTo
+ * @route   GET /api/v1/summary/statistics
+ * @desc    Получить статистику за период
+ * @access  Private
  */
-router.get('/by-category', summaryController.getByCategory);
+router.get('/statistics', authenticateToken, getStatistics);
 
 /**
- * GET /api/v1/summary/by-month
- * Получить помесячную статистику (для столбчатого графика)
- * Query params: months (количество последних месяцев)
+ * @route   GET /api/v1/summary/transactions
+ * @desc    Получить последние операции
+ * @access  Private
  */
-router.get('/by-month', summaryController.getByMonth);
+router.get('/transactions', authenticateToken, getRecentTransactions);
 
 export default router;
