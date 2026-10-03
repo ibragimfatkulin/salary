@@ -1,5 +1,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Получаем директорию текущего файла для корректного построения путей в ES-modules
 const __filename = fileURLToPath(import.meta.url);
@@ -13,7 +16,7 @@ export const DB_PATH = path.resolve(__dirname, '../../salary_tracker.db');
 
 // Настройки CORS для разрешения запросов с фронтенда
 export const CORS_OPTIONS = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };

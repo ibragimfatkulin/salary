@@ -1,6 +1,17 @@
-// Жестко задаем базовый URL
-const RAW_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const BASE_URL = RAW_BASE_URL.endsWith('/api/v1') ? RAW_BASE_URL : `${RAW_BASE_URL}/api/v1`;
+// Базовый URL API
+// В production на Vercel (когда клиент и сервер на одном домене) - относительный путь /api/v1
+// В локальной разработке - http://localhost:3001/api/v1
+const rawUrl = import.meta.env.VITE_API_URL || '';
+const isProd = import.meta.env.PROD;
+// В продакшене (Vercel) клиент и API на одном домене, поэтому используем относительный путь
+// Если указан localhost в проде, игнорируем его
+const effectiveUrl = (isProd && (!rawUrl || rawUrl.includes('localhost'))) 
+  ? '' 
+  : (rawUrl || (isProd ? '' : 'http://localhost:3001'));
+
+const BASE_URL = effectiveUrl.endsWith('/api/v1') 
+  ? effectiveUrl 
+  : `${effectiveUrl}/api/v1`;
 
 /**
  * Базовая функция для выполнения HTTP-запросов

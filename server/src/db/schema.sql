@@ -1,10 +1,5 @@
--- Удаляем старые таблицы, чтобы применить новую структуру
-DROP TABLE IF EXISTS incomes;
-DROP TABLE IF EXISTS expenses;
-DROP TABLE IF EXISTS users;
-
 -- Таблица пользователей
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
@@ -13,7 +8,7 @@ CREATE TABLE users (
 );
 
 -- Таблица доходов (связана с пользователем)
-CREATE TABLE incomes (
+CREATE TABLE IF NOT EXISTS incomes (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   amount REAL NOT NULL CHECK(amount > 0),
@@ -29,7 +24,7 @@ CREATE TABLE incomes (
 );
 
 -- Таблица расходов (связана с пользователем)
-CREATE TABLE expenses (
+CREATE TABLE IF NOT EXISTS expenses (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   amount REAL NOT NULL CHECK(amount > 0),
